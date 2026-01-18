@@ -5,7 +5,8 @@ import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const API_BASE = "http://localhost:5000/api/auth";
+// Prefer env variable when deployed; fallback to local dev API
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api/auth";
 
 export default function AuthForm() {
   const [mode, setMode] = useState("login"); 

@@ -22,12 +22,14 @@ connectDB();
    ========================= */
 const app = express();
 
+const allowedOrigin = process.env.CLIENT_ORIGIN || "http://localhost:5173";
+
 /* =========================
    MIDDLEWARES
    ========================= */
 app.use(cors({
-  origin: "http://localhost:5173", // frontend URL (Vite)
-  credentials: true,
+   origin: allowedOrigin,
+   credentials: true,
 }));
 
 app.use(express.json());
