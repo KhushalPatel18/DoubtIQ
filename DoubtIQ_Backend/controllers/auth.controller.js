@@ -13,12 +13,6 @@ const ensureJwtSecret = () => {
 	}
 };
 
-const checkDbConnection = () => {
-	if (mongoose.connection.readyState !== 1) {
-		throw new Error("Database connection not available");
-	}
-};
-
 const generateToken = (userId) => {
 	ensureJwtSecret();
 	return jwt.sign({ id: userId }, JWT_CONFIG.secret, {
@@ -33,8 +27,6 @@ const sendJson = (res, status, payload) => res.status(status).json(payload);
 	 ========================= */
 export const registerUser = async (req, res) => {
 	try {
-		checkDbConnection();
-		
 		const name = req.body?.name?.trim();
 		const email = normalizeEmail(req.body?.email || "");
 		const password = req.body?.password;
@@ -62,10 +54,7 @@ export const registerUser = async (req, res) => {
 		});
 	} catch (error) {
 		console.error("registerUser error:", error.message);
-		if (error.message === "Database connection not available") {
-			return sendJson(res, 503, { message: "Service temporarily unavailable. Please check database connection." });
-		}
-		return sendJson(res, 500, { message: "Internal server error" });
+		return sendJson(res, 500, { message: "Database connection error. Please contact admin." });
 	}
 };
 
@@ -74,8 +63,6 @@ export const registerUser = async (req, res) => {
 	 ========================= */
 export const loginUser = async (req, res) => {
 	try {
-		checkDbConnection();
-		
 		const email = normalizeEmail(req.body?.email || "");
 		const password = req.body?.password;
 
@@ -109,10 +96,7 @@ export const loginUser = async (req, res) => {
 		});
 	} catch (error) {
 		console.error("loginUser error:", error.message);
-		if (error.message === "Database connection not available") {
-			return sendJson(res, 503, { message: "Service temporarily unavailable. Please check database connection." });
-		}
-		return sendJson(res, 500, { message: "Internal server error" });
+		return sendJson(res, 500, { message: "Database connection error. Please contact admin." });
 	}
 };
 
