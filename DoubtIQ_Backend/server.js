@@ -43,19 +43,23 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/doubt", doubtRoutes);
 
-/* =========================
-   GLOBAL ERROR HANDLER
-   ========================= */
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    message: "Something went wrong",
-    error: err.message,
-  });
+// Handle favicon requests gracefully
+app.get('/favicon.ico', (req, res) => {
+   res.status(204).end();
 });
 
-app.use("/api/doubt", doubtRoutes);
+/* =========================
+    GLOBAL ERROR HANDLER (should be last)
+    ========================= */
+app.use((err, req, res, next) => {
+   console.error(err.stack);
+   res.status(500).json({
+      message: "Something went wrong",
+      error: err.message,
+   });
+});
 
 /* =========================
    SERVER START

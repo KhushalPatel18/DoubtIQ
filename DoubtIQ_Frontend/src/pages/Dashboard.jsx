@@ -37,7 +37,7 @@ const Dashboard = () => {
       const token = localStorage.getItem("token");
 
       const { data } = await axios.post(
-        `${API_BASE}/api/doubt/ask`,
+        `${API_BASE}/doubt/ask`,
         { question },
         {
           headers: {
