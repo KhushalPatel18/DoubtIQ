@@ -54,7 +54,10 @@ export const registerUser = async (req, res) => {
 		});
 	} catch (error) {
 		console.error("registerUser error:", error.message);
-		return sendJson(res, 500, { message: "Database connection error. Please contact admin." });
+		if (error.name === 'ValidationError') {
+			return sendJson(res, 400, { message: error.message });
+		}
+		return sendJson(res, 500, { message: "Server error. Please try again later." });
 	}
 };
 
@@ -96,7 +99,7 @@ export const loginUser = async (req, res) => {
 		});
 	} catch (error) {
 		console.error("loginUser error:", error.message);
-		return sendJson(res, 500, { message: "Database connection error. Please contact admin." });
+		return sendJson(res, 500, { message: "Server error. Please try again later." });
 	}
 };
 
