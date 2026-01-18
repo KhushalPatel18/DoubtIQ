@@ -17,7 +17,8 @@ const Dashboard = () => {
   // Logout
   const handleLogout = () => {
     localStorage.removeItem("token");
-    navigate("/");
+    toast.info("Logging out...");
+    setTimeout(() => navigate("/"), 1000);
   };
 
   // Ask Doubt
