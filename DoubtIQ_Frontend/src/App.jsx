@@ -1,24 +1,38 @@
-import React from 'react'
-import { Route, Routes, Navigate,BrowserRouter } from 'react-router-dom'
-import Landing from './pages/Landing'
-import AuthForm from './pages/AuthForm.jsx'
-import Dashboard from './pages/Dashboard.jsx'
+import React, { useState, useEffect } from 'react';
+import { Route, Routes, Navigate } from 'react-router-dom';
+import Landing from './pages/Landing';
+import AuthForm from './pages/AuthForm.jsx';
+import Dashboard from './pages/Dashboard.jsx';
 
-// ✅ SIMPLE INLINE AUTH CHECK
-const isAuthenticated = () => {
-  return Boolean(localStorage.getItem("token"));
+const ProtectedRoute = ({ children, isAuthenticated }) => {
+  if (isAuthenticated === null) {
+    return <div className="min-h-screen bg-[#020617]"></div>;
+  }
+  return isAuthenticated ? children : <Navigate to="/authform" replace />;
 };
 
 const App = () => {
-  return (
-    <div>
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/authform" element={<AuthForm />} />
-        <Route path="/dashboard" element={ isAuthenticated() ? <Dashboard /> : <Navigate to="/authform" replace /> } />
-      </Routes>
-    </div>
-  )
-}
+  const [isAuthenticated, setIsAuthenticated] = useState(null);
 
-export default App
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    setIsAuthenticated(!!token);
+  }, []);
+
+  return (
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/authform" element={<AuthForm />} />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
+  );
+};
+
+export default App;

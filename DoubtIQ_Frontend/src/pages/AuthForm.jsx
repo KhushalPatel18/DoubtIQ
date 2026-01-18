@@ -46,7 +46,7 @@ export default function AuthForm() {
           if (data.token) {
             localStorage.setItem("token", data.token);
             toast.success("Login successful!");
-            setTimeout(() => navigate("/dashboard"), 500);
+            navigate("/dashboard");
             return;
           }
         } catch (err) {
