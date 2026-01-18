@@ -6,7 +6,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 // Prefer env variable when deployed; fallback to local dev API
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api/auth";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
 export default function AuthForm() {
   const [mode, setMode] = useState("login"); 
@@ -38,7 +38,7 @@ export default function AuthForm() {
       /* ================= LOGIN ================= */
       if (mode === "login") {
         try {
-          const { data } = await axios.post(`${API_BASE}/login`, {
+          const { data } = await axios.post(`${API_BASE}/auth/login`, {
             email: form.email,
             password: form.password,
           });
@@ -58,7 +58,7 @@ export default function AuthForm() {
       /* ================= SIGNUP ================= */
       else if (mode === "signup") {
         try {
-          const { data } = await axios.post(`${API_BASE}/register`, {
+          const { data } = await axios.post(`${API_BASE}/auth/register`, {
             name: form.name,
             email: form.email,
             password: form.password,
@@ -79,7 +79,7 @@ export default function AuthForm() {
       /* ================= FORGOT PASSWORD ================= */
       else if (mode === "forgot") {
         try {
-          await axios.post(`${API_BASE}/forgot-password`, {
+          await axios.post(`${API_BASE}/auth/forgot-password`, {
             email: form.email,
           });
           toast.success("OTP sent to your email!");
@@ -93,7 +93,7 @@ export default function AuthForm() {
       /* ================= VERIFY OTP ================= */
       else if (mode === "otp") {
         try {
-          await axios.post(`${API_BASE}/verify-otp`, {
+          await axios.post(`${API_BASE}/auth/verify-otp`, {
             email: form.email,
             otp: form.otp,
           });
@@ -108,7 +108,7 @@ export default function AuthForm() {
       /* ================= RESET PASSWORD ================= */
       else if (mode === "reset") {
         try {
-          await axios.post(`${API_BASE}/reset-password`, {
+          await axios.post(`${API_BASE}/auth/reset-password`, {
             email: form.email,
             password: form.password,
           });
