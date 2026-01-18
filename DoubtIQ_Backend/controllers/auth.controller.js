@@ -1,6 +1,7 @@
 import User from "../models/user.js";
 import Otp from "../models/Otp.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import transporter from "../config/mail.js";
 import { JWT_CONFIG } from "../config/jwt.js";
 
@@ -9,6 +10,12 @@ const normalizeEmail = (email = "") => email.trim().toLowerCase();
 const ensureJwtSecret = () => {
 	if (!JWT_CONFIG?.secret) {
 		throw new Error("JWT secret is not configured");
+	}
+};
+
+const checkDbConnection = () => {
+	if (mongoose.connection.readyState !== 1) {
+		throw new Error("Database connection not available");
 	}
 };
 
@@ -26,6 +33,8 @@ const sendJson = (res, status, payload) => res.status(status).json(payload);
 	 ========================= */
 export const registerUser = async (req, res) => {
 	try {
+		checkDbConnection();
+		
 		const name = req.body?.name?.trim();
 		const email = normalizeEmail(req.body?.email || "");
 		const password = req.body?.password;
@@ -53,6 +62,9 @@ export const registerUser = async (req, res) => {
 		});
 	} catch (error) {
 		console.error("registerUser error:", error.message);
+		if (error.message === "Database connection not available") {
+			return sendJson(res, 503, { message: "Service temporarily unavailable. Please check database connection." });
+		}
 		return sendJson(res, 500, { message: "Internal server error" });
 	}
 };
@@ -62,6 +74,8 @@ export const registerUser = async (req, res) => {
 	 ========================= */
 export const loginUser = async (req, res) => {
 	try {
+		checkDbConnection();
+		
 		const email = normalizeEmail(req.body?.email || "");
 		const password = req.body?.password;
 
@@ -95,6 +109,9 @@ export const loginUser = async (req, res) => {
 		});
 	} catch (error) {
 		console.error("loginUser error:", error.message);
+		if (error.message === "Database connection not available") {
+			return sendJson(res, 503, { message: "Service temporarily unavailable. Please check database connection." });
+		}
 		return sendJson(res, 500, { message: "Internal server error" });
 	}
 };
