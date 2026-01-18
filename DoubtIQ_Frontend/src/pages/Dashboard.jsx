@@ -4,6 +4,9 @@ import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+// Get API base from env variable; fallback to localhost for dev
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
+
 const Dashboard = () => {
   const navigate = useNavigate();
 
@@ -34,7 +37,7 @@ const Dashboard = () => {
       const token = localStorage.getItem("token");
 
       const { data } = await axios.post(
-        "http://localhost:5000/api/doubt/ask",
+        `${API_BASE}/api/doubt/ask`,
         { question },
         {
           headers: {
