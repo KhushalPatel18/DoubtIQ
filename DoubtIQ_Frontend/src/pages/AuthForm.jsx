@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { Mail, User, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const API_BASE = "http://localhost:5000/api/auth";
 
@@ -18,7 +21,6 @@ export default function AuthForm() {
   });
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   const navigate = useNavigate();
 
@@ -28,97 +30,94 @@ export default function AuthForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
 
     try {
       setLoading(true);
 
       /* ================= LOGIN ================= */
       if (mode === "login") {
-        const res = await fetch(`${API_BASE}/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        try {
+          const { data } = await axios.post(`${API_BASE}/login`, {
             email: form.email,
             password: form.password,
-          }),
-        });
+          });
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message);
-
-        localStorage.setItem("token", data.token);
-        navigate("/dashboard");
+          if (data.token) {
+            localStorage.setItem("token", data.token);
+            toast.success("Login successful!");
+            setTimeout(() => navigate("/dashboard"), 500);
+            return;
+          }
+        } catch (err) {
+          const errorMsg = err.response?.data?.message || err.message || "Login failed";
+          toast.error(errorMsg);
+        }
       }
 
       /* ================= SIGNUP ================= */
-      if (mode === "signup") {
-        const res = await fetch(`${API_BASE}/register`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+      else if (mode === "signup") {
+        try {
+          const { data } = await axios.post(`${API_BASE}/register`, {
             name: form.name,
             email: form.email,
             password: form.password,
-          }),
-        });
+          });
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message);
-
-        localStorage.setItem("token", data.token);
-        navigate("/dashboard");
+          if (data.token) {
+            localStorage.setItem("token", data.token);
+            toast.success("Account created successfully!");
+            setTimeout(() => navigate("/dashboard"), 1500);
+            return;
+          }
+        } catch (err) {
+          const errorMsg = err.response?.data?.message || err.message || "Registration failed";
+          toast.error(errorMsg);
+        }
       }
 
       /* ================= FORGOT PASSWORD ================= */
-      if (mode === "forgot") {
-        const res = await fetch(`${API_BASE}/forgot-password`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: form.email }),
-        });
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message);
-
-        setMode("otp");
+      else if (mode === "forgot") {
+        try {
+          await axios.post(`${API_BASE}/forgot-password`, {
+            email: form.email,
+          });
+          toast.success("OTP sent to your email!");
+          setMode("otp");
+        } catch (err) {
+          const errorMsg = err.response?.data?.message || err.message || "Failed to send OTP";
+          toast.error(errorMsg);
+        }
       }
 
       /* ================= VERIFY OTP ================= */
-      if (mode === "otp") {
-        const res = await fetch(`${API_BASE}/verify-otp`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+      else if (mode === "otp") {
+        try {
+          await axios.post(`${API_BASE}/verify-otp`, {
             email: form.email,
             otp: form.otp,
-          }),
-        });
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message);
-
-        setMode("reset");
+          });
+          toast.success("OTP verified! Set your new password.");
+          setMode("reset");
+        } catch (err) {
+          const errorMsg = err.response?.data?.message || err.message || "OTP verification failed";
+          toast.error(errorMsg);
+        }
       }
 
       /* ================= RESET PASSWORD ================= */
-      if (mode === "reset") {
-        const res = await fetch(`${API_BASE}/reset-password`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+      else if (mode === "reset") {
+        try {
+          await axios.post(`${API_BASE}/reset-password`, {
             email: form.email,
             password: form.password,
-          }),
-        });
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message);
-
-        setMode("login");
+          });
+          toast.success("Password reset successful! Logging in...");
+          setTimeout(() => setMode("login"), 1500);
+        } catch (err) {
+          const errorMsg = err.response?.data?.message || err.message || "Password reset failed";
+          toast.error(errorMsg);
+        }
       }
-    } catch (err) {
-      setError(err.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -220,8 +219,6 @@ export default function AuthForm() {
             />
           )}
 
-          {error && <p className="text-red-400 text-sm">{error}</p>}
-
           <button
             type="submit"
             disabled={loading}
@@ -267,6 +264,18 @@ export default function AuthForm() {
           )}
         </div>
       </div>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="dark"
+      />
     </div>
   );
 }

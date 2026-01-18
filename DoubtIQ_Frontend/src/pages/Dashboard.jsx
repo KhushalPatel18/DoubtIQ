@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -7,22 +10,21 @@ const Dashboard = () => {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   // Logout
   const handleLogout = () => {
     localStorage.removeItem("token");
-    navigate("/authform");
+    toast.info("Logging out...");
+    setTimeout(() => navigate("/"), 1000);
   };
 
   // Ask Doubt
   const handleAskDoubt = async (e) => {
     e.preventDefault();
-    setError("");
     setAnswer("");
 
     if (!question.trim()) {
-      setError("Please enter your doubt");
+      toast.warning("Please enter your doubt");
       return;
     }
 
@@ -31,24 +33,21 @@ const Dashboard = () => {
 
       const token = localStorage.getItem("token");
 
-      const res = await fetch("http://localhost:5000/api/doubt/ask", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ question }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || "Something went wrong");
-      }
+      const { data } = await axios.post(
+        "http://localhost:5000/api/doubt/ask",
+        { question },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       setAnswer(data.answer || "No answer received");
+      toast.success("Answer received!");
     } catch (err) {
-      setError(err.message);
+      const errorMsg = err.response?.data?.message || err.message || "Failed to get answer";
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -86,10 +85,6 @@ const Dashboard = () => {
               className="w-full p-4 rounded-lg bg-[#020617] border border-gray-700 focus:outline-none focus:border-indigo-500 resize-none"
             />
 
-            {error && (
-              <p className="text-red-400 text-sm">{error}</p>
-            )}
-
             <button
               type="submit"
               disabled={loading}
@@ -111,6 +106,18 @@ const Dashboard = () => {
 
         </div>
       </main>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="dark"
+      />
     </div>
   );
 };
