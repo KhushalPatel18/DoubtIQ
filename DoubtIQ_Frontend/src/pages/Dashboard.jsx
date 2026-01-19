@@ -4,7 +4,7 @@ import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-// Get API base from env variable; fallback to localhost for dev
+// API base
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
 const Dashboard = () => {
@@ -21,11 +21,9 @@ const Dashboard = () => {
     setTimeout(() => navigate("/", { replace: true }), 1000);
   };
 
-  // Ask Doubt
+  // Ask doubt
   const handleAskDoubt = async (e) => {
     e.preventDefault();
-    setAnswer("");
-
     if (!question.trim()) {
       toast.warning("Please enter your doubt");
       return;
@@ -33,6 +31,7 @@ const Dashboard = () => {
 
     try {
       setLoading(true);
+      setAnswer("");
 
       const token = localStorage.getItem("token");
 
@@ -40,17 +39,17 @@ const Dashboard = () => {
         `${API_BASE}/doubt/ask`,
         { question },
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
       setAnswer(data.answer || "No answer received");
+      setQuestion("");
       toast.success("Answer received!");
     } catch (err) {
-      const errorMsg = err.response?.data?.message || err.message || "Failed to get answer";
-      toast.error(errorMsg);
+      toast.error(
+        err.response?.data?.message || "Failed to get answer"
+      );
     } finally {
       setLoading(false);
     }
@@ -64,63 +63,72 @@ const Dashboard = () => {
         <h1 className="text-xl font-semibold">Doubtiq Dashboard</h1>
         <button
           onClick={handleLogout}
-          className="px-4 py-2 bg-red-600 rounded hover:bg-red-500 transition"
+          className="px-4 py-2 bg-red-600 rounded-lg cursor-pointer hover:bg-red-500 transition"
         >
           Logout
         </button>
       </header>
 
       {/* Main */}
-      <main className="flex-1 flex items-center justify-center px-4">
-        <div className="w-full max-w-2xl space-y-6">
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <div className="w-full max-w-2xl mx-auto flex flex-col h-full px-4">
 
-          {/* Ask Doubt */}
-          <form onSubmit={handleAskDoubt} className="space-y-4">
-            <h2 className="text-2xl font-bold text-center">
-              Ask Your Doubt
-            </h2>
+          {/* Answer Section */}
+          <div className="flex-1 overflow-y-auto pb-4 pt-6">
+            {answer ? (
+              <div className="bg-[#020617] border border-gray-700 rounded-xl p-4">
+                <h3 className="text-lg font-semibold mb-2">AI Answer</h3>
+                <p className="text-gray-300 whitespace-pre-line">
+                  {answer}
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                Ask your doubt to get started
+              </div>
+            )}
+          </div>
 
-            <textarea
-              rows="5"
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              placeholder="Type your doubt here..."
-              className="w-full p-4 rounded-lg bg-[#020617] border border-gray-700 focus:outline-none focus:border-indigo-500 resize-none"
-            />
+          {/* Sticky Input Bar */}
+          <form
+            onSubmit={handleAskDoubt}
+            className="sticky bottom-0 bg-[#020617] py-4"
+          >
+            <div className="relative">
+              <textarea
+                rows="3"
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                placeholder="Type your doubt here..."
+                className="w-full p-4 pr-16 rounded-xl bg-[#020617] border border-gray-700 focus:outline-none focus:border-indigo-500 resize-none"
+              />
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-indigo-600 rounded-lg hover:bg-indigo-500 transition disabled:opacity-60"
-            >
-              {loading ? "Thinking..." : "Ask Doubt"}
-            </button>
-          </form>
-
-          {/* Answer */}
-          {answer && (
-            <div className="bg-[#020617] border border-gray-700 rounded-lg p-4">
-              <h3 className="text-lg font-semibold mb-2">AI Answer</h3>
-              <p className="text-gray-300 whitespace-pre-line">
-                {answer}
-              </p>
+              <button
+                type="submit"
+                disabled={loading}
+                className="absolute top-3 right-3 h-11 w-11 flex items-center justify-center rounded-full cursor-pointer transition disabled:opacity-60"
+                title="Send"
+              >
+                {loading ? (
+                  <span className="animate-spin text-indigo-500">⟳</span>
+                ) : (
+                  <svg
+                    className="w-5 h-5 text-indigo-500"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M2 21l21-9L2 3v7l15 2-15 2v7z" />
+                  </svg>
+                )}
+              </button>
             </div>
-          )}
+          </form>
 
         </div>
       </main>
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={true}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="dark"
-      />
+
+      {/* Toast */}
+      <ToastContainer theme="dark" position="top-right" autoClose={3000} />
     </div>
   );
 };

@@ -223,7 +223,7 @@ export default function AuthForm() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 transition disabled:opacity-60"
+            className="w-full py-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 transition disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
           >
             {loading ? "Please wait..." :
               mode === "login" ? "Login" :
@@ -237,12 +237,12 @@ export default function AuthForm() {
         <div className="mt-6 text-center text-sm text-gray-400 space-y-2">
           {mode === "login" && (
             <>
-              <button onClick={() => setMode("forgot")} className="hover:text-indigo-400">
+              <button onClick={() => setMode("forgot")} className="hover:text-indigo-400 cursor-pointer">
                 Forgot password?
               </button>
               <p>
                 Don’t have an account?{" "}
-                <button onClick={() => setMode("signup")} className="text-indigo-400">
+                <button onClick={() => setMode("signup")} className="text-indigo-400 cursor-pointer">
                   Sign up
                 </button>
               </p>
@@ -252,14 +252,14 @@ export default function AuthForm() {
           {mode === "signup" && (
             <p>
               Already have an account?{" "}
-              <button onClick={() => setMode("login")} className="text-indigo-400">
+              <button onClick={() => setMode("login")} className="text-indigo-400 cursor-pointer">
                 Login
               </button>
             </p>
           )}
 
           {(mode === "forgot" || mode === "otp" || mode === "reset") && (
-            <button onClick={() => setMode("login")} className="text-indigo-400">
+            <button onClick={() => setMode("login")} className="text-indigo-400 cursor-pointer">
               Back to Login
             </button>
           )}
