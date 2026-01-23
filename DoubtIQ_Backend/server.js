@@ -5,6 +5,7 @@ import cors from "cors";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
 import doubtRoutes from "./routes/doubt.routes.js";
+import chatRoutes from "./routes/chat.routes.js";
 
 /* =========================
    ENV CONFIG
@@ -33,26 +34,27 @@ app.use(express.urlencoded({ extended: true }));
    DB CONNECTION MIDDLEWARE
    ========================= */
 app.use(async (req, res, next) => {
-  try {
-    await connectDB();
-    next();
-  } catch (error) {
-    res.status(503).json({ 
-      message: "Database connection unavailable. Please try again later.",
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
+   try {
+      await connectDB();
+      next();
+   } catch (error) {
+      res.status(503).json({
+         message: "Database connection unavailable. Please try again later.",
+         error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+   }
 });
 
 /* =========================
    ROUTES
    ========================= */
 app.get("/", (req, res) => {
-  res.json({ message: "Doubtiq API is running 🚀" });
+   res.json({ message: "Doubtiq API is running 🚀" });
 });
 
 app.use("/api/auth", authRoutes);
 app.use("/api/doubt", doubtRoutes);
+app.use("/api/chat", chatRoutes);
 
 // Handle favicon requests gracefully
 app.get('/favicon.ico', (req, res) => {
@@ -80,12 +82,12 @@ export default app;
 
 // For local development, start the server
 if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, async () => {
-    try {
-      await connectDB();
-      console.log(`Server running on http://localhost:${PORT}`);
-    } catch (error) {
-      console.error("Failed to connect to database:", error.message);
-    }
-  });
+   app.listen(PORT, async () => {
+      try {
+         await connectDB();
+         console.log(`Server running on http://localhost:${PORT}`);
+      } catch (error) {
+         console.error("Failed to connect to database:", error.message);
+      }
+   });
 }
