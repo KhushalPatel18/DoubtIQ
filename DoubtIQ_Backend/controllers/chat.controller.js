@@ -1,27 +1,45 @@
 import Chat from "../models/Chat.js";
-import { askAI } from "../utils/ai.js";
+import { askAI, askVisionAI } from "../utils/ai.js";
+import { createRequire } from "module";
 
-// Create a new chat session
+const require = createRequire(import.meta.url);
+const pdfParse = require("pdf-parse");
+
 export const createChat = async (req, res) => {
     try {
         const userId = req.user._id;
-        const { message } = req.body; // Optional initial message
+        let { message } = req.body;
 
         const chat = await Chat.create({
             user: userId,
             messages: [],
         });
 
-        // If there's an initial message, process it immediately
-        if (message) {
-            chat.messages.push({ role: "user", content: message });
+        if (message || req.file) {
+            let userMessageObj = { role: "user", content: message || "Analyze this file" };
+            let aiResponse = "";
 
-            // Get AI response
-            const aiResponse = await askAI(message);
+            if (req.file) {
+                userMessageObj.fileAttachment = req.file.originalname;
+                if (req.file.mimetype === "application/pdf") {
+                    const pdfData = await pdfParse(req.file.buffer);
+                    const pdfText = pdfData.text.substring(0, 15000); // Prevent overflow
+                    const combinedMessage = `User Input: ${message || "Explain this PDF Document"}\n\nDocument Content:\n${pdfText}`;
+                    aiResponse = await askAI(combinedMessage);
+                } else if (req.file.mimetype.startsWith("image/")) {
+                    const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+                    userMessageObj.image = base64Image;
+                    aiResponse = await askVisionAI(message || "What is this image about?", base64Image);
+                }
+            } else {
+                aiResponse = await askAI(message);
+            }
+
+            chat.messages.push(userMessageObj);
             chat.messages.push({ role: "ai", content: aiResponse });
 
-            // Update title based on first message
-            chat.title = message.substring(0, 30) + (message.length > 30 ? "..." : "");
+            const titleBase = message && message.trim() ? message : req.file ? req.file.originalname : "New Chat";
+            chat.title = titleBase.substring(0, 30) + (titleBase.length > 30 ? "" : "");
 
             await chat.save();
         }
@@ -67,11 +85,10 @@ export const getChatById = async (req, res) => {
     }
 };
 
-// Send a message to an existing chat
 export const sendMessage = async (req, res) => {
     try {
         const { id } = req.params;
-        const { message } = req.body;
+        let { message } = req.body;
         const userId = req.user._id;
 
         const chat = await Chat.findOne({ _id: id, user: userId });
@@ -80,20 +97,34 @@ export const sendMessage = async (req, res) => {
             return res.status(404).json({ message: "Chat not found" });
         }
 
-        // Add user message to history
-        chat.messages.push({ role: "user", content: message });
+        let userMessageObj = { role: "user", content: message || "Analyze this file" };
+        let aiResponse = "";
 
-        // If it's the first message and title is default, update title
-        if (chat.messages.length === 1 && chat.title === "New Chat") {
-            chat.title = message.substring(0, 30) + (message.length > 30 ? "..." : "");
+        if (req.file) {
+            userMessageObj.fileAttachment = req.file.originalname;
+            if (req.file.mimetype === "application/pdf") {
+                const pdfData = await pdfParse(req.file.buffer);
+                const pdfText = pdfData.text.substring(0, 15000);
+                const combinedMessage = `User Input: ${message || "Explain this PDF Document"}\n\nDocument Content:\n${pdfText}`;
+                aiResponse = await askAI(combinedMessage);
+            } else if (req.file.mimetype.startsWith("image/")) {
+                const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+                userMessageObj.image = base64Image;
+                aiResponse = await askVisionAI(message || "What is this image about?", base64Image);
+            }
+        } else {
+            aiResponse = await askAI(message);
         }
 
-        await chat.save(); // Save user message first so we don't lose it if AI fails
+        chat.messages.push(userMessageObj);
 
-        // Call AI
-        const aiResponse = await askAI(message);
+        if (chat.messages.length === 1 && chat.title === "New Chat") {
+            const titleBase = message && message.trim() ? message : req.file ? req.file.originalname : "New Chat";
+            chat.title = titleBase.substring(0, 30) + (titleBase.length > 30 ? "..." : "");
+        }
 
-        // Add AI response
+        await chat.save();
+
         chat.messages.push({ role: "ai", content: aiResponse });
         await chat.save();
 

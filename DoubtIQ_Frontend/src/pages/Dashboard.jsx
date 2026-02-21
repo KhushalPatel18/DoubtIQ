@@ -13,9 +13,15 @@ import {
   User,
   Pencil,
   Trash2,
-  Check
+  Check,
+  Paperclip,
+  FileText
 } from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
+import "highlight.js/styles/github-dark.css";
 
 // API base
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
@@ -31,6 +37,8 @@ const Dashboard = () => {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const fileInputRef = useRef(null);
 
   // Rename/Delete states
   const [editingChatId, setEditingChatId] = useState(null);
@@ -88,18 +96,32 @@ const Dashboard = () => {
     setActiveChatId(null);
     setMessages([]);
     setInput("");
+    setSelectedFile(null);
     setSidebarOpen(false);
   };
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() && !selectedFile) return;
 
     const currentInput = input;
+    const currentFile = selectedFile;
+
     setInput("");
+    setSelectedFile(null);
 
     // Optimistic UI update
-    const tempMessages = [...messages, { role: "user", content: currentInput, timestamp: new Date() }];
+    let previewImage = null;
+    if (currentFile && currentFile.type.startsWith("image/")) {
+      previewImage = URL.createObjectURL(currentFile);
+    }
+
+    const tempMessages = [...messages, {
+      role: "user",
+      content: currentInput || `Attached: ${currentFile?.name}`,
+      image: previewImage,
+      timestamp: new Date()
+    }];
     setMessages(tempMessages);
     setLoading(true);
 
@@ -107,20 +129,24 @@ const Dashboard = () => {
       const token = localStorage.getItem("token");
       let data;
 
+      const formData = new FormData();
+      if (currentInput.trim()) formData.append("message", currentInput);
+      if (currentFile) formData.append("file", currentFile);
+
       if (activeChatId) {
         // Send to existing chat
         const res = await axios.post(
           `${API_BASE}/chat/${activeChatId}/message`,
-          { message: currentInput },
-          { headers: { Authorization: `Bearer ${token}` } }
+          formData,
+          { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
         );
         data = res.data;
       } else {
         // Create new chat
         const res = await axios.post(
           `${API_BASE}/chat/new`,
-          { message: currentInput },
-          { headers: { Authorization: `Bearer ${token}` } }
+          formData,
+          { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
         );
         data = res.data;
         setActiveChatId(data._id);
@@ -348,14 +374,38 @@ const Dashboard = () => {
                 )}
 
                 <div
-                  className={`max-w-[85%] lg:max-w-[70%] rounded-2xl px-4 py-3 ${msg.role === 'user'
+                  className={`max-w-[85%] lg:max-w-[70%] rounded-2xl px-4 py-3 overflow-x-auto ${msg.role === 'user'
                     ? 'bg-indigo-600 text-white rounded-br-none'
-                    : 'bg-gray-800 text-gray-100 rounded-bl-none'
+                    : 'bg-gray-800 text-gray-100 rounded-bl-none prose prose-invert max-w-none'
                     }`}
                 >
-                  <p className="whitespace-pre-wrap leading-relaxed text-sm lg:text-base">
-                    {msg.content}
-                  </p>
+                  {msg.image && (
+                    <div className="mb-3">
+                      <img src={msg.image} alt="User upload" className="max-h-64 object-contain rounded-lg border border-white/10" />
+                    </div>
+                  )}
+                  {msg.fileAttachment && !msg.image && (
+                    <div className="mb-3 flex items-center gap-2 bg-gray-900/50 p-2.5 rounded-lg border border-gray-700 w-fit max-w-full">
+                      <FileText size={18} className="text-indigo-400 flex-shrink-0" />
+                      <span className="text-sm font-medium truncate">{msg.fileAttachment}</span>
+                    </div>
+                  )}
+                  {msg.role === 'user' ? (
+                    msg.content && msg.content !== "Analyze this file" && (
+                      <p className="whitespace-pre-wrap leading-relaxed text-sm lg:text-base">
+                        {msg.content}
+                      </p>
+                    )
+                  ) : (
+                    <div className="text-sm lg:text-base">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        rehypePlugins={[rehypeHighlight]}
+                      >
+                        {msg.content}
+                      </ReactMarkdown>
+                    </div>
+                  )}
                 </div>
 
                 {msg.role === 'user' && (
@@ -389,6 +439,51 @@ const Dashboard = () => {
             onSubmit={handleSendMessage}
             className="max-w-4xl mx-auto relative flex items-end gap-2 bg-gray-800/50 p-2 rounded-xl border border-gray-700 focus-within:border-indigo-500 transition-colors"
           >
+            {/* File Preview Popup */}
+            {selectedFile && (
+              <div className="absolute bottom-[calc(100%+0.5rem)] left-0 p-2 bg-gray-800 border border-gray-700 rounded-xl flex items-center gap-3 shadow-lg max-w-sm animate-fade-in-up">
+                {selectedFile.type.startsWith("image/") ? (
+                  <img src={URL.createObjectURL(selectedFile)} alt="preview" className="h-12 w-12 object-cover rounded-md" />
+                ) : (
+                  <div className="h-12 w-12 bg-gray-700 flex items-center justify-center rounded-md text-indigo-400">
+                    <FileText size={24} />
+                  </div>
+                )}
+                <div className="flex flex-col overflow-hidden text-sm">
+                  <span className="font-medium text-gray-200 truncate">{selectedFile.name}</span>
+                  <span className="text-xs text-gray-500">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedFile(null)}
+                  className="p-1.5 hover:bg-gray-700 hover:text-red-400 rounded-lg ml-auto transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
+
+            {/* Hidden File Input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*,.pdf"
+              onChange={(e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                  setSelectedFile(e.target.files[0]);
+                }
+              }}
+            />
+
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2.5 text-gray-400 hover:text-indigo-400 transition-colors rounded-lg hover:bg-gray-700/50 mb-1"
+            >
+              <Paperclip size={20} />
+            </button>
+
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -398,14 +493,14 @@ const Dashboard = () => {
                   handleSendMessage(e);
                 }
               }}
-              placeholder="Type your message..."
+              placeholder="Type your message or attach a file..."
               className="w-full bg-transparent border-none focus:ring-0 text-white resize-none max-h-32 min-h-[44px] py-3 px-2"
               rows={1}
             />
             <button
               type="submit"
-              disabled={loading || !input.trim()}
-              className="p-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:hover:bg-indigo-600 text-white rounded-lg transition-colors mb-1"
+              disabled={loading || (!input.trim() && !selectedFile)}
+              className="p-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:hover:bg-indigo-600 text-white rounded-lg transition-colors mb-1"
             >
               <Send size={20} />
             </button>

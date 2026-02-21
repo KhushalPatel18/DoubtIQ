@@ -36,3 +36,32 @@ export const askAI = async (question) => {
     throw new Error(`AI service error: ${error.message}`);
   }
 };
+
+export const askVisionAI = async (question, base64Image) => {
+  try {
+    if (!process.env.GROQ_API_KEY) {
+      throw new Error("GROQ_API_KEY not found in environment variables");
+    }
+
+    const response = await client.chat.completions.create({
+      model: "llama-3.2-11b-vision-preview",
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: question },
+            { type: "image_url", image_url: { url: base64Image } }
+          ],
+        },
+      ],
+      temperature: 0.5,
+      max_tokens: 1024,
+    });
+
+    return response.choices[0].message.content;
+  } catch (error) {
+    console.error("GROQ Vision AI error:", error.message);
+    console.error("Full error:", error);
+    throw new Error(`AI service error: ${error.message}`);
+  }
+};

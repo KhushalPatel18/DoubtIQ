@@ -10,6 +10,14 @@ const messageSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    image: {
+        type: String, // Store base64 or URL
+        default: null
+    },
+    fileAttachment: {
+        type: String, // File name
+        default: null
+    },
     timestamp: {
         type: Date,
         default: Date.now,
