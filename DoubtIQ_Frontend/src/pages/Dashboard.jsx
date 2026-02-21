@@ -23,6 +23,42 @@ import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github-dark.css";
 
+const Typewriter = ({ text, onComplete }) => {
+  const [displayedText, setDisplayedText] = useState("");
+  const [index, setIndex] = useState(0);
+  const lines = text.split("\n");
+  const [displayedLines, setDisplayedLines] = useState([]);
+  const [currentLineIdx, setCurrentLineIdx] = useState(0);
+
+  useEffect(() => {
+    if (currentLineIdx < lines.length) {
+      const timer = setTimeout(() => {
+        setDisplayedLines((prev) => [...prev, lines[currentLineIdx]]);
+        setCurrentLineIdx((prev) => prev + 1);
+      }, 100); // Adjust speed here (ms per line)
+      return () => clearTimeout(timer);
+    } else if (onComplete) {
+      onComplete();
+    }
+  }, [currentLineIdx, lines, onComplete]);
+
+  return (
+    <div className="space-y-1">
+      {displayedLines.map((line, i) => (
+        <div key={i} className="animate-slide-up">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeHighlight]}
+          >
+            {line}
+          </ReactMarkdown>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+
 // API base
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -153,7 +189,11 @@ const Dashboard = () => {
         fetchChatHistory(); // Refresh sidebar to show new chat
       }
 
-      setMessages(data.messages);
+      setMessages(data.messages.map((m, i) =>
+        i === data.messages.length - 1 && m.role === 'ai'
+          ? { ...m, shouldAnimate: true }
+          : m
+      ));
     } catch (err) {
       toast.error("Failed to send message");
       // Revert optimistic update on failure (optional, but good UX)
@@ -398,12 +438,22 @@ const Dashboard = () => {
                     )
                   ) : (
                     <div className="text-sm lg:text-base">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        rehypePlugins={[rehypeHighlight]}
-                      >
-                        {msg.content}
-                      </ReactMarkdown>
+                      {msg.shouldAnimate ? (
+                        <Typewriter
+                          text={msg.content}
+                          onComplete={() => {
+                            // Optionally remove flag once done to prevent re-animation on re-renders if needed
+                            setMessages(prev => prev.map((m, i) => i === idx ? { ...m, shouldAnimate: false } : m));
+                          }}
+                        />
+                      ) : (
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          rehypePlugins={[rehypeHighlight]}
+                        >
+                          {msg.content}
+                        </ReactMarkdown>
+                      )}
                     </div>
                   )}
                 </div>
@@ -421,11 +471,14 @@ const Dashboard = () => {
               <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
                 <Bot size={18} />
               </div>
-              <div className="bg-gray-800 rounded-2xl px-4 py-3 rounded-bl-none">
-                <div className="flex space-x-2">
-                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" />
-                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-75" />
-                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-150" />
+              <div className="bg-gray-800 rounded-2xl px-6 py-4 rounded-bl-none min-w-[120px] animate-thinking border border-white/5 shadow-xl">
+                <div className="flex items-center space-x-3">
+                  <div className="flex space-x-1.5">
+                    <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                    <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                    <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" />
+                  </div>
+                  <span className="text-xs font-medium text-indigo-300/80 tracking-wide uppercase">Assistant is thinking</span>
                 </div>
               </div>
             </div>
