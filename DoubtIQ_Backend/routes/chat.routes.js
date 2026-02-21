@@ -15,7 +15,7 @@ const router = express.Router();
 // Setup Multer for memory storage (for direct base64 API posting)
 const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+    limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 
 router.use(requireAuth); // All chat routes need auth

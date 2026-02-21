@@ -44,7 +44,7 @@ export const askVisionAI = async (question, base64Image) => {
     }
 
     const response = await client.chat.completions.create({
-      model: "llama-3.2-11b-vision-preview",
+      model: "meta-llama/llama-4-scout-17b-16e-instruct",
       messages: [
         {
           role: "user",
