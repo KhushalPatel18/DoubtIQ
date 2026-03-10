@@ -15,7 +15,9 @@ import {
   Trash2,
   Check,
   Paperclip,
-  FileText
+  FileText,
+  Mic,
+  MicOff
 } from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
 import ReactMarkdown from "react-markdown";
@@ -75,6 +77,72 @@ const Dashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Speech Recognition
+  const [isListening, setIsListening] = useState(false);
+  const [interimTranscript, setInterimTranscript] = useState("");
+  const recognitionRef = useRef(null);
+
+  // Initialize Speech Recognition
+  useEffect(() => {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onresult = (event) => {
+      let interim = "";
+      let final = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          final += transcript;
+        } else {
+          interim += transcript;
+        }
+      }
+      if (final) {
+        setInput((prev) => (prev ? prev + " " + final.trim() : final.trim()));
+      }
+      setInterimTranscript(interim);
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error:", event.error);
+      setIsListening(false);
+      setInterimTranscript("");
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      setInterimTranscript("");
+    };
+
+    recognitionRef.current = recognition;
+
+    return () => {
+      recognition.abort();
+    };
+  }, []);
+
+  const toggleListening = () => {
+    const recognition = recognitionRef.current;
+    if (!recognition) {
+      toast.error("Speech recognition is not supported in your browser.");
+      return;
+    }
+    if (isListening) {
+      recognition.stop();
+    } else {
+      setInterimTranscript("");
+      recognition.start();
+      setIsListening(true);
+    }
+  };
 
   // Rename/Delete states
   const [editingChatId, setEditingChatId] = useState(null);
@@ -537,19 +605,48 @@ const Dashboard = () => {
               <Paperclip size={20} />
             </button>
 
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage(e);
+            {/* Microphone Button */}
+            <button
+              type="button"
+              onClick={toggleListening}
+              title={isListening ? "Stop listening" : "Speak your message"}
+              className={`relative p-2.5 transition-colors rounded-lg mb-1 ${
+                isListening
+                  ? "text-red-400 bg-red-500/10 hover:bg-red-500/20"
+                  : "text-gray-400 hover:text-indigo-400 hover:bg-gray-700/50"
+              }`}
+            >
+              {isListening && (
+                <span className="absolute inset-0 rounded-lg bg-red-500/20 animate-ping" />
+              )}
+              {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+            </button>
+
+            <div className="flex-1 flex flex-col">
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage(e);
+                  }
+                }}
+                placeholder={
+                  isListening
+                    ? "Listening... speak your question"
+                    : "Type your message or attach a file..."
                 }
-              }}
-              placeholder="Type your message or attach a file..."
-              className="w-full bg-transparent border-none focus:ring-0 text-white resize-none max-h-32 min-h-[44px] py-3 px-2"
-              rows={1}
-            />
+                className="w-full bg-transparent border-none focus:ring-0 text-white resize-none max-h-32 min-h-[44px] py-3 px-2"
+                rows={1}
+              />
+              {/* Interim transcript preview */}
+              {isListening && interimTranscript && (
+                <p className="text-xs text-indigo-300/70 px-2 pb-1 italic truncate">
+                  {interimTranscript}
+                </p>
+              )}
+            </div>
             <button
               type="submit"
               disabled={loading || (!input.trim() && !selectedFile)}
